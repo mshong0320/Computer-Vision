@@ -14,30 +14,26 @@ from numpy.lib.stride_tricks import as_strided
 import scipy.ndimage as ndimage
 
 def detect_features(image, window_size):
-	"""
-    Computer Vision 600.461/661 Assignment 2
+"""
     Args:
         image (numpy.ndarray): The input image to detect features on. Note: this is NOT the image name or image path.
     Returns:
         pixel_coords (list of tuples): A list of (row,col) tuples of detected feature locations in the image
-	"""
+"""
 	cornerList = []
 	img_gry = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
 	#normalize image with gaussian blur
 	blurred_img = cv2.medianBlur(img_gry, 11)
-    # cv2.imwrite('blah1.png', img_gry)
 	sigma = 1
-
-    # perform gaussian kernel on the img and obtain derivative of our image
-    #Gaus_Ker = cv2.getGaussianKernel(5, sigma) #setting the gaussian kernel
 	
 	#This is to reduce the noise in the image
 	Gaus_Ker = makeGaussian(15, sigma, center=None)
-    # makes the img_gry blur by convolving this gaussian kernel.
+        
+	# makes the img_gry blur by convolving this gaussian kernel.
 	img_gry = signal.convolve2d(img_gry, Gaus_Ker, boundary='symm', mode='same', fillvalue=0)
 
-    #Using sobel filter to get better derivative values
+    	#Using sobel filter to get better derivative values
 	# s_mask = 17
 	# sobelx = np.abs(cv2.Sobel(img_gry, cv2.CV_64F, 1, 0, ksize=s_mask))
 	#b_sobelx = np.abs(cv2.Sobel(blurred_img, cv2.CV_64F, 1, 0, ksize=s_mask))
@@ -49,11 +45,12 @@ def detect_features(image, window_size):
 	#b_sobely = interval_mapping(b_sobely, np.min(sobely), np.max(sobely), 0, 255)
 	# sobel_xy = 0.5 * sobelx + 0.5 * sobely
 	#b_sobel_xy = 0.5 * b_sobelx + 0.5 * b_sobely
-
-
+	
+	# gradient finding
 	d_x, d_y = np.gradient(img_gry, edge_order=2)
 	# folllowed some codes from https://github.com/hughesj919/HarrisCorner/blob/master/Corners.py
-    # making H matrix
+    	
+	# making the H matrix
 	Ixx = d_x**2
 	Ixy = 2*(d_x * d_y)
 	Iyy = d_y**2
@@ -70,7 +67,7 @@ def detect_features(image, window_size):
 
 	for y in range(offset, cols+1):
 		for x in range(offset, rows-offset):
-            #Calculate sum of squares
+            	#Calculate sum of squares
 			windowIxx = Ixx[y-offset:y+offset+1, x-offset:x+offset+1]
 			windowIxy = Ixy[y-offset:y+offset+1, x-offset:x+offset+1]
 			windowIyy = Iyy[y-offset:y+offset+1, x-offset:x+offset+1]
@@ -78,13 +75,13 @@ def detect_features(image, window_size):
 			Sxy = windowIxy.sum()
 			Syy = windowIyy.sum()
 
-            #Find determinant and trace, use to get corner response
+           	 	#Find determinant and trace, use to get corner response
 			det = (Sxx * Syy) - (Sxy**2)
 			trace = Sxx + Syy
 			r = det - k*(trace**2)
 			#print r.max()
-			#sys.exit()
-            #If corner response is over threshold, color the point and add to corner list
+
+            		#If corner response is over threshold, color the point and add to corner list
 			if r > 55000000:
 				# print x, y, r
 				cornerList.append([x, y, r])
@@ -93,7 +90,6 @@ def detect_features(image, window_size):
 				# color_img.itemset((y, x, 2), 255)
 				cv2.circle(color_img, (int(x), int(y)), 2, Spring_Green)
 	return color_img, cornerList
-
 
 def interval_mapping(image, from_min, from_max, to_min, to_max):
     from_range = from_max - from_min
@@ -112,16 +108,14 @@ def makeGaussian(size, sigma, center=None):
         y0 = center[1]
     return np.exp(-4*np.log(2) * ((x-x0)**2 + (y-y0)**2) / sigma**2)
 
-
-
-# code obtained thru help from HyungMu Lee
+# with some help from my colleague HyungMu Lee the following code matches detected features from one image1 to features in image 2
 def match_features(feature_coords1, feature_coords2, image1, image2):
 	I1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
 	I2 = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
 	heig1, wid1 = np.shape(I1)
 	heig2, wid2 = np.shape(I2)
 
-    # Patch Size
+    	# Patch Size
 	window_size = 17
 	
 	print "matching features..."
@@ -211,7 +205,6 @@ def match_features(feature_coords1, feature_coords2, image1, image2):
 			matches.append([(r1,c1), (r2,c2)])
 			cv2.line(match_img, (c1, r1), (c2, r2), (255, 255, 255), thickness=1, lineType=8, shift=0)
 	return matches, match_img
-
 
 def main():
 	image =[]
